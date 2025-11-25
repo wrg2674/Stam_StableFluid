@@ -6,6 +6,6 @@ ScalarGrid::ScalarGrid(vector<vector<vector<ScalarCell>>> cell, glm::vec3 origin
 	initCell();
 
 }
-void ScalarGrid::createCell(int x, int y, int z, glm::vec3 cellPos, bool isBoundary=false) {
-	this->cell[x][y][z] = ScalarCell(cellPos, 0, isBoundary);
+void ScalarGrid::createCell(int x, int y, int z, glm::vec3 cellPos, glm::vec3 cellSize, bool isBoundary=false) {
+	this->cell[x][y][z] = ScalarCell(cellPos, cellSize, 0, isBoundary);
 }

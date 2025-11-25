@@ -16,10 +16,13 @@ class Cell {
 private:
 	glm::vec3 pos=glm::vec3(0);
 	bool Boundary;
+	glm::vec3 cellSize;
 public:
-	Cell(glm::vec3 pos, bool Boundary);
+	Cell(glm::vec3 pos, glm::vec3 cellSize, bool Boundary);
 	glm::vec3 getPos();
+	glm::vec3 getCellSize();
 	bool isBoundary();
+	
 };
 
 #endif

@@ -1,6 +1,6 @@
 #include "VectorCell.h"
 
-VectorCell::VectorCell(glm::vec3 pos, glm::vec3 vec, bool isBoundary) :Cell(pos, isBoundary) {
+VectorCell::VectorCell(glm::vec3 pos, glm::vec3 vec, glm::vec3 cellSize, bool isBoundary):Cell(pos, cellSize, isBoundary){
 	this->vec = vec;
 	if (isBoundary == true) {
 		this->vec = glm::vec3(0);

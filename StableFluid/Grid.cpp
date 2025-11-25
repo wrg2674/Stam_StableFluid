@@ -12,13 +12,13 @@ void Grid::initCell() {
 			for (int z = 0; z <= number.z; z++) {
 				glm::vec3 cellPos = glm::vec3(x, y, z);
 				if (x == number.x || y == number.y || z == number.z) {
-					createCell(x, y, z, cellPos, true);
+					createCell(x, y, z, cellPos, cellSize, true);
 				}
 				if (x == 0 || y == 0 || z == 0) {
-					createCell(x, y, z, cellPos, true);
+					createCell(x, y, z, cellPos, cellSize, true);
 				}
 				else {
-					createCell(x, y, z, cellPos);
+					createCell(x, y, z, cellPos, cellSize);
 				}
 			}
 		}
@@ -26,4 +26,7 @@ void Grid::initCell() {
 }
 glm::vec3 Grid::getNumber() {
 	return number;
+}
+glm::vec3 Grid::getLength() {
+	return length;
 }

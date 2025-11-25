@@ -17,9 +17,10 @@ using namespace std;
 
 class ScalarGrid : public Grid {
 private:
-	vector<vector<vector<ScalarCell>>> cell;
+	
 public:
+	vector<vector<vector<ScalarCell>>> cell;
 	ScalarGrid(vector<vector<vector<ScalarCell>>> cell, glm::vec3 origin, glm::vec3 length, glm::vec3 number);
-	void createCell(int x, int y, int z, glm::vec3 cellPos, bool isBoundary=false);
+	void createCell(int x, int y, int z, glm::vec3 cellPos, glm::vec3 cellSize, bool isBoundary=false);
 };
 #endif

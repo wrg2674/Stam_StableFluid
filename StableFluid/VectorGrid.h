@@ -21,6 +21,6 @@ private:
 public:
 	vector<vector<vector<VectorCell>>> cell;
 	VectorGrid(vector<vector<vector<VectorCell>>> cell, glm::vec3 origin, glm::vec3 length, glm::vec3 number);
-	void createCell(int x, int y, int z, glm::vec3 cellPos, bool isBoundary=false);
+	void createCell(int x, int y, int z, glm::vec3 cellPos,glm::vec3 cellSize, glm::vec3 value, bool isBoundary=false);
 };
 #endif

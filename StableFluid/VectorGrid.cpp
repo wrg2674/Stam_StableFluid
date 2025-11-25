@@ -6,6 +6,6 @@ VectorGrid::VectorGrid(vector<vector<vector<VectorCell>>> cell, glm::vec3 origin
 	initCell();
 
 }
-void VectorGrid::createCell(int x, int y, int z, glm::vec3 cellPos, bool isBoundary=false) {
-	this->cell[x][y][z] = VectorCell(cellPos, glm::vec3(0), isBoundary);
+void VectorGrid::createCell(int x, int y, int z, glm::vec3 cellPos, glm::vec3 cellSize, glm::vec3 value, bool isBoundary=false) {
+	this->cell[x][y][z] = VectorCell(cellPos, cellSize, glm::vec3(0), isBoundary);
 }

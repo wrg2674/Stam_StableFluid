@@ -21,11 +21,16 @@ using namespace std;
 
 class Solver {
 private:
+	VectorGrid prevVelocityField;
+	VectorGrid nextVelocityField;
+	ScalarGrid prevRhoField;
+	ScalarGrid nextRhoField;
+
 	double dt;
-	void addForce(VectorCell& prevVc, glm::vec3 force);
-	void transport(VectorGrid& vf, VectorCell& prevVc, int i, int j, int k, double dt);
-	void diffuse();
-	void project(VectorCell vc);
+	void addForce(VectorCell& nextVc, glm::vec3 force);
+	void transport(VectorCell& nextVc, int i, int j, int k, double dt);
+	void diffuse(VectorGrid& vf, ScalarGrid& sf, double viscosity);
+	void project(VectorCell& nextVc);
 public:
 	Solver(double dt);
 	void updateVectorField(glm::vec3 force);
