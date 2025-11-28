@@ -18,7 +18,7 @@
 
 glm::vec3 trace(VectorGrid& prevField, VectorCell vc, int i, int j, int k, double dt) {
 	glm::vec3 currentPos = glm::vec3(prevField.cell[i][j][k].getPos().x, prevField.cell[i][j][k].getPos().y, prevField.cell[i][j][k].getPos().z);
-	glm::vec3 prevPos = glm::vec3(currentPos.x - vc.getPos().x * dt, currentPos.y - vc.getPos().y * dt, currentPos.z - vc.getPos().z * dt);
+	glm::vec3 prevPos = glm::vec3(currentPos.x - vc.get().x * dt, currentPos.y - vc.get().y * dt, currentPos.z - vc.get().z * dt);
 
 	return prevPos;
 }

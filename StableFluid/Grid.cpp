@@ -1,12 +1,14 @@
 #include "Grid.h"
 
-Grid::Grid(glm::vec3 origin, glm::vec3 length, glm::vec3 number) {
+template <typename T>
+Grid<T>::Grid(glm::vec3 origin, glm::vec3 length, glm::vec3 number) {
 	this->origin = origin;
 	this->length = length;
 	this->number = number;
 	this->cellSize = length / number;
 }
-void Grid::initCell() {
+template <typename T>
+void Grid<T>::initCell() {
 	for (int x = 0; x <= number.x; x++) {
 		for (int y = 0; y <= number.y; y++) {
 			for (int z = 0; z <= number.z; z++) {
@@ -14,7 +16,7 @@ void Grid::initCell() {
 				if (x == number.x || y == number.y || z == number.z) {
 					createCell(x, y, z, cellPos, cellSize, true);
 				}
-				if (x == 0 || y == 0 || z == 0) {
+				else if (x == 0 || y == 0 || z == 0) {
 					createCell(x, y, z, cellPos, cellSize, true);
 				}
 				else {
@@ -24,9 +26,11 @@ void Grid::initCell() {
 		}
 	}
 }
-glm::vec3 Grid::getNumber() {
+template <typename T>
+glm::vec3 Grid<T>::getNumber() {
 	return number;
 }
-glm::vec3 Grid::getLength() {
+template <typename T>
+glm::vec3 Grid<T>::getLength() {
 	return length;
 }

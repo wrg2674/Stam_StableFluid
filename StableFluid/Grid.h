@@ -10,19 +10,19 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
 
-
 using namespace std;
-
+template <typename T>
 class Grid {
 protected:
 	glm::vec3 origin;
 	glm::vec3 length;
 	glm::vec3 number;
 	glm::vec3 cellSize;
+
 public:
 	Grid(glm::vec3 origin, glm::vec3 length, glm::vec3 number);
 	void initCell();
-	virtual void createCell(int x, int y, int z, glm::vec3 cellPos, glm::vec3 cellSize, bool isBoundary = false);
+	virtual void createCell(int x, int y, int z, glm::vec3 cellPos, glm::vec3 cellSize, T value, bool isBoundary = false);
 	glm::vec3 getNumber();
 	glm::vec3 getLength();
 };

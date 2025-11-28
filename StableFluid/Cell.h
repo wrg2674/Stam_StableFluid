@@ -15,10 +15,10 @@ using namespace std;
 class Cell {
 private:
 	glm::vec3 pos=glm::vec3(0);
-	bool Boundary;
+	bool boundary;
 	glm::vec3 cellSize;
 public:
-	Cell(glm::vec3 pos, glm::vec3 cellSize, bool Boundary);
+	Cell(glm::vec3 pos, glm::vec3 cellSize, bool boundary);
 	glm::vec3 getPos();
 	glm::vec3 getCellSize();
 	bool isBoundary();
