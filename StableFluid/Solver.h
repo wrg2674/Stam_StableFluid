@@ -29,7 +29,7 @@ private:
 	double dt;
 	void addForce(VectorCell& nextVc, glm::vec3 force);
 	void transport(VectorCell& nextVc, VectorGrid& vf, int i, int j, int k, double dt);
-	void diffuse(VectorGrid& vf, ScalarGrid& sf, double viscosity, int i, int j, int k);
+	void diffuse(double viscosity);
 	void project(VectorCell& nextVc);
 public:
 	Solver(double dt);

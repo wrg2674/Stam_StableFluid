@@ -123,11 +123,9 @@ glm::vec3 curl(VectorGrid& nextVf, int i, int j, int k) {
 
 	return result;
 }
-glm::vec3 laplaccian(VectorGrid& vf, ScalarGrid& sf, int i, int j, int k) {
-	
-	return gradient(sf, i, j, k) - curl(vf, i, j, k);
-}
-bool isOutOfBound(int i, int j, int k, Grid grid){
+
+template <typename T>
+bool isOutOfBound(int i, int j, int k, Grid<T> grid){
 	if ((i - 1) < 0 || (i + 1) >= grid.getNumber().x) {
 		return true;
 	}
