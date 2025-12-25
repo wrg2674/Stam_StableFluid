@@ -22,30 +22,38 @@ void Solver::transport(VectorCell& nextVc, VectorGrid& vf, int i, int j, int k, 
 	nextVc.updateCell(interpolate(vf, prevPos));
 }
 void Solver::diffuse(double viscosity) {
-	double alpha = alpha = viscosity * dt / (prevVelocityField.cell.size() * prevVelocityField.cell.size());
+	double cellSize = prevVelocityField.cell[0][0][0].getCellSize().x;
+	double alpha = alpha = viscosity * dt / (cellSize * cellSize);
+	vector<vector<vector<VectorCell>>>jcbVec = prevVelocityField.cell;
+	vector<vector<vector<ScalarCell>>>jcbSca = prevRhoField.cell;
 	for (int n = 0; n < 30; n++) {
 		for (int i = 0; i < prevVelocityField.getNumber().x; i++) {
 			for (int j = 0; j < prevVelocityField.getNumber().y; j++) {
 				for (int k = 0; k < prevVelocityField.getNumber().z; k++) {
 					vector<vector<vector<VectorCell>>>& nvc = nextVelocityField.cell;
-					double nx = nvc[i - 1][j][k].get().x + nvc[i + 1][j][k].get().x + nvc[i][j - 1][k].get().x + nvc[i][j + 1][k].get().x + nvc[i][j][k - 1].get().x + nvc[i][j][k + 1].get().x;
-					double ny = nvc[i - 1][j][k].get().y + nvc[i + 1][j][k].get().y + nvc[i][j - 1][k].get().y + nvc[i][j + 1][k].get().y + nvc[i][j][k - 1].get().y + nvc[i][j][k + 1].get().y;
-					double nz = nvc[i - 1][j][k].get().z + nvc[i + 1][j][k].get().z + nvc[i][j - 1][k].get().z + nvc[i][j + 1][k].get().z + nvc[i][j][k - 1].get().z + nvc[i][j][k + 1].get().z;
-					nx = (alpha * nx + prevVelocityField.cell[i][j][k].get().x) / (1 + 6 * alpha);
-					ny = (alpha * ny + prevVelocityField.cell[i][j][k].get().y) / (1 + 6 * alpha);
-					nz = (alpha * nz + prevVelocityField.cell[i][j][k].get().z) / (1 + 6 * alpha);
-
+					vector<vector<vector<VectorCell>>>& pvc = prevVelocityField.cell;
+					glm::vec3 laplaccianVec = laplaccian(nextVelocityField, i, j, k);
+					double nx = pvc[i][j][k].get().x + alpha * (cellSize * cellSize * laplaccianVec.x + 6 * nvc[i][j][k].get().x);
+					double ny = pvc[i][j][k].get().y + alpha * (cellSize * cellSize * laplaccianVec.y + 6 * nvc[i][j][k].get().y);
+					double nz = pvc[i][j][k].get().z + alpha * (cellSize * cellSize * laplaccianVec.z + 6 * nvc[i][j][k].get().z);
+					
+					nx = nx / (1 + 6 * alpha);
+					ny = ny / (1 + 6 * alpha);
+					nz = nz / (1 + 6 * alpha);
 					glm::vec3 updateVector = glm::vec3(nx, ny, nz);
-					nvc[i][j][k].updateCell(updateVector);
+					jcbVec[i][j][k].updateCell(updateVector);
 
 					vector<vector<vector<ScalarCell>>>& nsc = nextRhoField.cell;
-					double ns = nsc[i - 1][j][k].get() + nsc[i + 1][j][k].get() + nsc[i][j - 1][k].get() + nsc[i][j + 1][k].get() + nsc[i][j][k - 1].get() + nsc[i][j][k + 1].get();
-					ns = (alpha * ns + prevRhoField.cell[i][j][k].get()) / (1 + 6 * alpha);
-
-					nsc[i][j][k].updateCell(ns);
+					vector<vector<vector<ScalarCell>>>& psc = prevRhoField.cell;
+					double laplaccianSca = laplaccian(nextRhoField, i, j, k);
+					double ns = psc[i][j][k].get() + alpha * (cellSize * cellSize * laplaccianSca + 6 * nsc[i][j][k].get());
+					ns = ns / (1 + 6 * alpha);
+					jcbSca[i][j][k].updateCell(ns);
 				}
 			}
 		}
+		nextVelocityField.cell = jcbVec;
+		nextRhoField.cell = jcbSca;
 	}
 	
 }

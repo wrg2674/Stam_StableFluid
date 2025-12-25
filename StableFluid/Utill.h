@@ -124,6 +124,42 @@ glm::vec3 curl(VectorGrid& nextVf, int i, int j, int k) {
 	return result;
 }
 
+glm::vec3 laplaccian(VectorGrid& nextVf, int i, int j, int k) {
+	if (isOutOfBound(i, j, k, nextVf)) {
+		return glm::vec3(0);
+	}
+	vector<vector<vector<VectorCell>>>& nvc = nextVf.cell;
+	double cellSize = nvc[i][j][k].getCellSize().x;
+
+	double nx = nvc[i - 1][j][k].get().x + nvc[i + 1][j][k].get().x + nvc[i][j - 1][k].get().x + nvc[i][j + 1][k].get().x + nvc[i][j][k - 1].get().x + nvc[i][j][k + 1].get().x;
+	double ny = nvc[i - 1][j][k].get().y + nvc[i + 1][j][k].get().y + nvc[i][j - 1][k].get().y + nvc[i][j + 1][k].get().y + nvc[i][j][k - 1].get().y + nvc[i][j][k + 1].get().y;
+	double nz = nvc[i - 1][j][k].get().z + nvc[i + 1][j][k].get().z + nvc[i][j - 1][k].get().z + nvc[i][j + 1][k].get().z + nvc[i][j][k - 1].get().z + nvc[i][j][k + 1].get().z;
+	
+	nx = nx - 6 * nvc[i][j][k].get().x;
+	ny = ny - 6 * nvc[i][j][k].get().y;
+	nz = nz - 6 * nvc[i][j][k].get().z;
+
+	nx = nx / (cellSize * cellSize);
+	ny = ny / (cellSize * cellSize);
+	nz = nz / (cellSize * cellSize);
+	return glm::vec3(nx, ny, nz);
+}
+
+double laplaccian(ScalarGrid& nextSf, int i, int j, int k) {
+	if (isOutOfBound(i, j, k, nextSf)) {
+		return 0.0;
+	}
+	vector<vector<vector<ScalarCell>>>& nvc = nextSf.cell;
+	double cellSize = nvc[i][j][k].getCellSize().x;
+
+	double nv = nvc[i - 1][j][k].get() + nvc[i + 1][j][k].get() + nvc[i][j - 1][k].get() + nvc[i][j + 1][k].get() + nvc[i][j][k - 1].get() + nvc[i][j][k + 1].get();
+	nv = nv - 6 * nvc[i][j][k].get();
+
+
+	nv = nv / (cellSize * cellSize);
+	return nv;
+}
+
 template <typename T>
 bool isOutOfBound(int i, int j, int k, Grid<T> grid){
 	if ((i - 1) < 0 || (i + 1) >= grid.getNumber().x) {
