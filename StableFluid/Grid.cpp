@@ -12,7 +12,11 @@ void Grid<T>::initCell() {
 	for (int x = 0; x <= number.x; x++) {
 		for (int y = 0; y <= number.y; y++) {
 			for (int z = 0; z <= number.z; z++) {
-				glm::vec3 cellPos = glm::vec3(x, y, z);
+				double xPos = x * cellSize.x+0.5*cellSize.x;
+				double yPos = y * cellSize.y+0.5*cellSize.y;
+				double zPos = z * cellSize.z+0.5*cellSize.z;
+				glm::vec3 cellPos = glm::vec3(xPos, yPos, zPos);
+
 				if (x == number.x || y == number.y || z == number.z) {
 					createCell(x, y, z, cellPos, cellSize, true);
 				}

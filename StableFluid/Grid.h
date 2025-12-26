@@ -20,6 +20,7 @@ protected:
 	glm::vec3 cellSize;
 
 public:
+	vector<vector<vector<T>>> cell;
 	Grid(glm::vec3 origin, glm::vec3 length, glm::vec3 number);
 	void initCell();
 	virtual void createCell(int x, int y, int z, glm::vec3 cellPos, glm::vec3 cellSize, T value, bool isBoundary = false);

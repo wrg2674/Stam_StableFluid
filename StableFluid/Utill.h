@@ -76,9 +76,6 @@ double difference(double prevValue, double nextValue, double cellSize) {
 }
 
 glm::vec3 gradient(ScalarGrid& nextSf, int i, int j, int k) {
-	if (isOutOfBound(i, j, k, nextSf)) {
-		return glm::vec3(0);
-	}
 	glm::vec3 result;
 	glm::vec3 cellSize = nextSf.cell[i][j][k].getCellSize();
 
@@ -90,9 +87,6 @@ glm::vec3 gradient(ScalarGrid& nextSf, int i, int j, int k) {
 	return result;
 }
 double divergence(VectorGrid& nextVf, int i, int j, int k) {
-	if (isOutOfBound(i, j, k, nextVf)) {
-		return 0;
-	}
 	glm::vec3 cellSize = nextVf.cell[i][j][k].getCellSize();
 	double x = difference(nextVf.cell[i - 1][j][k].getX(), nextVf.cell[i + 1][j][k].getX(), cellSize.x);
 	double y = difference(nextVf.cell[i][j - 1][k].getY(), nextVf.cell[i][j + 1][k].getY(), cellSize.y);
@@ -101,9 +95,6 @@ double divergence(VectorGrid& nextVf, int i, int j, int k) {
 	return x + y + z;
 }
 glm::vec3 curl(VectorGrid& nextVf, int i, int j, int k) {
-	if(isOutOfBound(i, j, k, nextVf)) {
-		return glm::vec3(0);
-	}
 
 	glm::vec3 cellSize = nextVf.cell[i][j][k].getCellSize();
 
@@ -125,9 +116,6 @@ glm::vec3 curl(VectorGrid& nextVf, int i, int j, int k) {
 }
 
 glm::vec3 laplaccian(VectorGrid& nextVf, int i, int j, int k) {
-	if (isOutOfBound(i, j, k, nextVf)) {
-		return glm::vec3(0);
-	}
 	vector<vector<vector<VectorCell>>>& nvc = nextVf.cell;
 	double cellSize = nvc[i][j][k].getCellSize().x;
 
@@ -146,9 +134,6 @@ glm::vec3 laplaccian(VectorGrid& nextVf, int i, int j, int k) {
 }
 
 double laplaccian(ScalarGrid& nextSf, int i, int j, int k) {
-	if (isOutOfBound(i, j, k, nextSf)) {
-		return 0.0;
-	}
 	vector<vector<vector<ScalarCell>>>& nvc = nextSf.cell;
 	double cellSize = nvc[i][j][k].getCellSize().x;
 
@@ -160,18 +145,79 @@ double laplaccian(ScalarGrid& nextSf, int i, int j, int k) {
 	return nv;
 }
 
-template <typename T>
-bool isOutOfBound(int i, int j, int k, Grid<T> grid){
-	if ((i - 1) < 0 || (i + 1) >= grid.getNumber().x) {
-		return true;
-	}
-	if ((j - 1) < 0 || (j + 1) >= grid.getNumber().y) {
-		return true;
-	}
-	if ((k - 1) < 0 || (k + 1) >= grid.getNumber().z) {
-		return true;
-	}
-	return false;
-}
+void neumannBoundaryCondition(VectorGrid& vf) {
+	double nx, ny, nz;
+	int bx, by, bz;
+	glm::vec3 avg;
+	bx = vf.getNumber().x+1;
+	by = vf.getNumber().y + 1;
+	bz = vf.getNumber().z + 1;
 
+	for (int j = 0; j < vf.getNumber().y; j++) {
+		for (int k = 0; k < vf.getNumber().z; k++) {
+			nx = -vf.cell[1][j][k].getX();
+			ny = vf.cell[1][j][k].getY();
+			nz = vf.cell[1][j][k].getZ();
+			vf.cell[0][j][k].updateCell(glm::vec3(nx, ny, nz));
+
+			nx = -vf.cell[bx - 1][j][k].getX();
+			ny = vf.cell[bx - 1][j][k].getY();
+			nz = vf.cell[bx - 1][j][k].getZ();
+			vf.cell[bx][j][k].updateCell(glm::vec3(nx, ny, nz));
+		}
+	}
+	for (int i = 0; i < vf.getNumber().x; i++) {
+		for (int k = 0; k < vf.getNumber().z; k++) {
+			nx = vf.cell[i][1][k].getX();
+			ny = -vf.cell[i][1][k].getY();
+			nz = vf.cell[i][1][k].getZ();
+			vf.cell[i][0][k].updateCell(glm::vec3(nx, ny, nz));
+
+			nx = vf.cell[i][by-1][k].getX();
+			ny = -vf.cell[i][by-1][k].getY();
+			nz = vf.cell[i][by-1][k].getZ();
+			vf.cell[i][by][k].updateCell(glm::vec3(nx, ny, nz));
+		}
+	}
+
+	for (int i = 0; i < vf.getNumber().x; i++) {
+		for (int j = 0; j < vf.getNumber().y; j++) {
+			nx = vf.cell[i][j][1].getX();
+			ny = vf.cell[i][j][1].getY();
+			nz = -vf.cell[i][j][1].getZ();
+			vf.cell[i][j][0].updateCell(glm::vec3(nx, ny, nz));
+
+			nx = vf.cell[i][j][bz-1].getX();
+			ny = vf.cell[i][j][bz-1].getY();
+			nz = -vf.cell[i][j][bz-1].getZ();
+			vf.cell[i][j][bz].updateCell(glm::vec3(nx, ny, nz));
+		}
+	}
+	// 코너 처리
+	avg = (vf.cell[1][0][0].get() + vf.cell[0][1][0].get() + vf.cell[0][0][1].get())/glm::vec3(3);
+	vf.cell[0][0][0].updateCell(avg);
+
+	avg = (vf.cell[bx-1][0][0].get()+vf.cell[bx][1][0].get()+vf.cell[bx][0][1].get())/glm::vec3(3);
+	vf.cell[bx][0][0].updateCell(avg);
+
+	avg = (vf.cell[1][by][0].get() + vf.cell[0][by-1][0].get() + vf.cell[0][by][1].get()) / glm::vec3(3);
+	vf.cell[0][by][0].updateCell(avg);
+
+	avg = (vf.cell[1][0][bz].get() + vf.cell[0][1][bz].get() + vf.cell[0][0][bz-1].get()) / glm::vec3(3);
+	vf.cell[0][0][bz].updateCell(avg);
+
+
+
+	avg = (vf.cell[bx-1][by][0].get() + vf.cell[bx][by-1][0].get() + vf.cell[bx][by][1].get()) / glm::vec3(3);
+	vf.cell[bx][by][0].updateCell(avg);
+
+	avg = (vf.cell[1][by][bz].get() + vf.cell[0][by-1][bz].get() + vf.cell[0][by][bz-1].get()) / glm::vec3(3);
+	vf.cell[0][by][bz].updateCell(avg);
+
+	avg = (vf.cell[bx][1][bz].get() + vf.cell[bx-1][0][bz].get() + vf.cell[bx][0][bz-1].get()) / glm::vec3(3);
+	vf.cell[bx][0][bz].updateCell(avg);
+
+	avg = (vf.cell[bx-1][by][bz].get() + vf.cell[bx][by-1][bz].get() + vf.cell[bx][by][bz - 1].get()) / glm::vec3(3);
+	vf.cell[bx][by][bz].updateCell(avg);
+}
 #endif
