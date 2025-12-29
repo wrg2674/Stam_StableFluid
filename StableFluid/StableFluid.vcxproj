@@ -135,7 +135,6 @@
   <ItemGroup>
     <ClCompile Include="Cell.cpp" />
     <ClCompile Include="glad.c" />
-    <ClCompile Include="Grid.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ScalarCell.cpp" />
     <ClCompile Include="ScalarGrid.cpp" />

@@ -8,9 +8,9 @@ private:
 	double rho;
 
 public:
-	ScalarCell(glm::vec3 pos, glm::vec3 cellSize, double rho, bool isBoundary);
+	ScalarCell(glm::vec3 pos, glm::vec3 cellSize, bool isBoundary);
 	void updateCell(double rho);
 	double get();
 };
 
-#endif#pragma once
+#endif

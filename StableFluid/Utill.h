@@ -22,54 +22,38 @@ glm::vec3 trace(VectorGrid& prevField, VectorCell vc, int i, int j, int k, doubl
 
 	return prevPos;
 }
-glm::vec3 interpolate(VectorGrid& prevField, glm::vec3 prevPos) {
-	int nX = int(prevPos.x);
-	int nY = int(prevPos.y);
-	int nZ = int(prevPos.z);
 
-	if ((nX <= 0 || nX + 1 >= prevField.getNumber().x) ||
-		(nY <= 0 || nY + 1 >= prevField.getNumber().y) ||
-		(nZ <= 0 || nZ + 1 >= prevField.getNumber().z)) {
-		return glm::vec3(0);
+double clamp(double value, double min, double max) {
+	if (value < min) {
+		return min;
 	}
-
-	glm::vec3 weight = glm::vec3(prevPos.x - nX, prevPos.y - nY, prevPos.z - nZ);
-
-	glm::vec3 interpolateElement = prevField.cell[nX][nY][nZ].get();
-	glm::vec3 interpolateElementXplus = prevField.cell[nX + 1][nY][nZ].get();
-	glm::vec3 interpolateElementYplus = prevField.cell[nX][nY + 1][nZ].get();
-	glm::vec3 interpolateElementZplus = prevField.cell[nX][nY][nZ + 1].get();
-	glm::vec3 interpolateElementXYplus = prevField.cell[nX + 1][nY + 1][nZ].get();
-	glm::vec3 interpolateElementYZplus = prevField.cell[nX][nY + 1][nZ + 1].get();
-	glm::vec3 interpolateElementXZplus = prevField.cell[nX + 1][nY][nZ + 1].get();
-	glm::vec3 interpolateElementXYZplus = prevField.cell[nX + 1][nY + 1][nZ + 1].get();
-
-	double interpolateInX1 = 0;
-	double interpolateInX2 = 0;
-	double interpolateInX3 = 0;
-	double interpolateInX4 = 0;
-
-	double interpolateInY1 = 0;
-	double interpolateInY2 = 0;
-
-	double interpolateInZ = 0;
-
-	glm::vec3 result = glm::vec3(0);
-
-	for (int i = 0; i < 3; i++) {
-
-		interpolateInX1 = (1 - weight[0]) * interpolateElement[i] + (weight[0]) * interpolateElementXplus[i];
-		interpolateInX2 = (1 - weight[0]) * interpolateElementYplus[i] + (weight[0]) * interpolateElementXYplus[i];
-		interpolateInX3 = (1 - weight[0]) * interpolateElementZplus[i] + (weight[0]) * interpolateElementXZplus[i];
-		interpolateInX4 = (1 - weight[0]) * interpolateElementYZplus[i] + (weight[0]) * interpolateElementXYZplus[i];
-
-		interpolateInY1 = (1 - weight[1]) * interpolateInX1 + (weight[1]) * interpolateInX2;
-		interpolateInY2 = (1 - weight[1]) * interpolateInX3 + (weight[1]) * interpolateInX4;
-
-		interpolateInZ = (1 - weight[2]) * interpolateInY1 + (weight[2]) * interpolateInY2;
-		result[i] = interpolateInZ;
+	if (value > max) {
+		return max;
 	}
-	return result;
+	return value;
+}
+glm::vec3 interpolate(VectorGrid& vf, glm::vec3 prevPos) {
+	// 이전 벡터장의 i, j, k를 prevPos로부터 구해야함 - 아직 안함
+	glm::vec3 currentPos = vf.cell[i][j][k].getPos();
+	double weightElementX = (prevPos.x - currentPos.x) / (vf.cell[i + 1][j][k].getPos().x - currentPos.x);
+	double weightElementY = (prevPos.y - currentPos.y) / (vf.cell[i][j + 1][k].getPos().y - currentPos.y);
+	double weightElementZ = (prevPos.z - currentPos.z) / (vf.cell[i][j][k + 1].getPos().z - currentPos.z);
+
+	weightElementX = clamp(weightElementX, 0, 1);
+	weightElementY = clamp(weightElementY, 0, 1);
+	weightElementZ = clamp(weightElementZ, 0, 1);
+
+	glm::vec3 weightX = glm::vec3(weightElementX);
+	glm::vec3 weightY = glm::vec3(weightElementY);
+	glm::vec3 weightZ = glm::vec3(weightElementZ);
+
+	glm::vec3 result;
+	glm::vec3 interpolateX1 = (glm::vec3(1) - weightX) * vf.cell[i][j][k].get() + (weightX)*vf.cell[i + 1][j][k].get();
+	glm::vec3 interpolateX2 = (glm::vec3(1) - weightX) * vf.cell[i][j + 1][k].get() + (weightX)*vf.cell[i + 1][j + 1][k].get();
+	glm::vec3 interpolateX3 = (glm::vec3(1) - weightX) * vf.cell[i][j][k + 1].get() + (weightX)*vf.cell[i + 1][j][k + 1].get();
+	glm::vec3 interpolateX4 = (glm::vec3(1) - weightX) * vf.cell[i][j + 1][k + 1].get() + (weightX)*vf.cell[i + 1][j + 1][k + 1].get();
+
+
 }
 double difference(double prevValue, double nextValue, double cellSize) {
 	return (nextValue - prevValue) / (2.0*cellSize);

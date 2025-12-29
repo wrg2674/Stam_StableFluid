@@ -1,6 +1,6 @@
 #include "Cell.h"
 
-Cell::Cell(glm::vec3 pos, glm::vec3 cellSize = glm::vec3(1, 1, 1), bool boundary) {
+Cell::Cell(glm::vec3 pos, glm::vec3 cellSize, bool boundary) {
 	this->pos = pos;
 	this->boundary = boundary;
 	this->cellSize = cellSize;

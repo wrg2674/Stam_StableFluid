@@ -5,7 +5,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include "Shader.h"
-#include "Camera.h"
+#include "camera.h"
 
 using namespace std;
 

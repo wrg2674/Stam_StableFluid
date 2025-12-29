@@ -15,12 +15,10 @@
 
 using namespace std;
 
-class VectorGrid : public Grid<glm::vec3>{
+class VectorGrid : public Grid<VectorCell>{
 private:
-	
+
 public:
-	vector<vector<vector<VectorCell>>> cell;
 	VectorGrid(glm::vec3 origin, glm::vec3 length, glm::vec3 number);
-	void createCell(int x, int y, int z, glm::vec3 cellPos,glm::vec3 cellSize, glm::vec3 value, bool isBoundary=false) override;
 };
 #endif

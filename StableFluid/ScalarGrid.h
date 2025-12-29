@@ -15,12 +15,10 @@
 
 using namespace std;
 
-class ScalarGrid : public Grid<double> {
+class ScalarGrid : public Grid<ScalarCell>{
 private:
-	
+
 public:
-	vector<vector<vector<ScalarCell>>> cell;
 	ScalarGrid(glm::vec3 origin, glm::vec3 length, glm::vec3 number);
-	void createCell(int x, int y, int z, glm::vec3 cellPos, glm::vec3 cellSize, bool isBoundary=false);
 };
 #endif
