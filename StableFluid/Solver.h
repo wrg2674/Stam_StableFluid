@@ -30,13 +30,11 @@ private:
 	void addForce(VectorCell& nextVc, glm::vec3 force);
 	void transport(VectorCell& nextVc, VectorGrid& vf, int i, int j, int k, double dt);
 	void diffuse(double viscosity);
-	void project(VectorCell& nextVc);
+	void project(VectorGrid& vf, ScalarGrid& pf);
 public:
 	Solver(double dt);
 	void updateVectorField(glm::vec3 force);
 	void updateScalarField(double source);
-
-
 };
 
 

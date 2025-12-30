@@ -27,10 +27,11 @@ void Solver::diffuse(double viscosity) {
 	vector<vector<vector<VectorCell>>>jcbVec = prevVelocityField.cell;
 	vector<vector<vector<ScalarCell>>>jcbSca = prevRhoField.cell;
 
+	// Jacobi iteration
 	for (int n = 0; n < 30; n++) {
-		for (int i = 1; i < prevVelocityField.getNumber().x; i++) {
-			for (int j = 1; j < prevVelocityField.getNumber().y; j++) {
-				for (int k = 1; k < prevVelocityField.getNumber().z; k++) {
+		for (int i = 1; i < prevVelocityField.getNumber().x - 1; i++) {
+			for (int j = 1; j < prevVelocityField.getNumber().y - 1; j++) {
+				for (int k = 1; k < prevVelocityField.getNumber().z - 1; k++) {
 					vector<vector<vector<VectorCell>>>& nvc = nextVelocityField.cell;
 					vector<vector<vector<VectorCell>>>& pvc = prevVelocityField.cell;
 					glm::vec3 laplaccianVec = laplaccian(nextVelocityField, i, j, k);
@@ -60,14 +61,52 @@ void Solver::diffuse(double viscosity) {
 	}
 	
 }
-void Solver::project(VectorCell& nextVc){
+void Solver::project(VectorGrid& vf, ScalarGrid& pf){
+	int nx = (int)vf.getNumber().x;
+	int ny = (int)vf.getNumber().y;
+	int nz = (int)vf.getNumber().z;
+	double cellSize = vf.cell[0][0][0].getCellSize().x;
+	ScalarGrid divergenceF = pf;
+	VectorGrid jcbVf = vf;
+	ScalarGrid jcbSf = pf;
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				divergenceF.cell[i][j][k].updateCell(divergence(vf, i, j, k));
+			}
+		}
+	}
+	// Jacobi iteration
+	for (int n = 0; n < 30; n++) {
+		for (int i = 1; i < nx - 1; i++) {
+			for (int j = 1; j < ny - 1; j++) {
+				for (int k = 1; k < nz - 1; k++) {
+					double neighbor = neighborSum(pf, i, j, k);
+					double value = neighbor - divergenceF.cell[i][j][k].get() * cellSize * cellSize;
+					value = value / 6;
+					jcbSf.cell[i][j][k].updateCell(value);
+				}
+			}
+		}
+		pf = jcbSf;
+	}
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				glm::vec3 value = vf.cell[i][j][k].get() - gradient(pf, i, j, k);
+				jcbVf.cell[i][j][k].updateCell(value);
+			}
+		}
+	}
+	vf = jcbVf;
 
+	// neumann 경계조건 추가해야함 (위치는 모름)
 }
 
 void Solver::updateVectorField(glm::vec3 force){
-	for (int i = 1; i < prevVelocityField.getNumber().x; i++) {
-		for (int j = 1; j < prevVelocityField.getNumber().y; j++) {
-			for (int k = 1; k < prevVelocityField.getNumber().z; k++) {
+	for (int i = 1; i < prevVelocityField.getNumber().x - 1; i++) {
+		for (int j = 1; j < prevVelocityField.getNumber().y - 1; j++) {
+			for (int k = 1; k < prevVelocityField.getNumber().z - 1; k++) {
 				VectorCell& currentVc = prevVelocityField.cell[i][j][k];
 				if (currentVc.isBoundary()) {
 					continue;
@@ -78,9 +117,9 @@ void Solver::updateVectorField(glm::vec3 force){
 		}
 	}
 	prevVelocityField = nextVelocityField;
-	for (int i = 1; i < prevVelocityField.getNumber().x; i++) {
-		for (int j = 1; j < prevVelocityField.getNumber().y; j++) {
-			for (int k = 1; k < prevVelocityField.getNumber().z; k++) {
+	for (int i = 1; i < prevVelocityField.getNumber().x - 1; i++) {
+		for (int j = 1; j < prevVelocityField.getNumber().y - 1; j++) {
+			for (int k = 1; k < prevVelocityField.getNumber().z - 1; k++) {
 				VectorCell& currentVc = prevVelocityField.cell[i][j][k];
 				if (currentVc.isBoundary()) {
 					continue;
@@ -92,24 +131,26 @@ void Solver::updateVectorField(glm::vec3 force){
 	}
 	ScalarGrid sf = ScalarGrid(glm::vec3(0, 0, 0), nextVelocityField.getLength(), nextVelocityField.getNumber());
 	VectorGrid vf = VectorGrid(glm::vec3(0, 0, 0), nextVelocityField.getLength(), nextVelocityField.getNumber());
-	for (int i = 1; i < nextVelocityField.getNumber().x; i++) {
-		for (int j = 1; j < nextVelocityField.getNumber().y; j++) {
-			for (int k = 1; k < nextVelocityField.getNumber().z; k++) {
+	for (int i = 1; i < nextVelocityField.getNumber().x - 1; i++) {
+		for (int j = 1; j < nextVelocityField.getNumber().y - 1; j++) {
+			for (int k = 1; k < nextVelocityField.getNumber().z - 1; k++) {
 				sf.cell[i][j][k].updateCell(divergence(nextVelocityField, i, j, k));
 				vf.cell[i][j][k].updateCell(curl(nextVelocityField, i, j, k));
 			}
 		}
 	}
-	for (int i = 1; i < nextVelocityField.getNumber().x; i++) {
-		for (int j = 1; j < nextVelocityField.getNumber().y; j++) {
-			for (int k = 1; k < nextVelocityField.getNumber().z; k++) {
+	double viscocity = 0.5;
+	diffuse(viscocity);
+
+	for (int i = 1; i < nextVelocityField.getNumber().x - 1; i++) {
+		for (int j = 1; j < nextVelocityField.getNumber().y - 1; j++) {
+			for (int k = 1; k < nextVelocityField.getNumber().z - 1; k++) {
 				VectorCell currentVc = nextVelocityField.cell[i][j][k];
 				if (currentVc.isBoundary()) {
 					continue;
 				}
-				diffuse();
-				project(currentVc);
-
+				
+				
 			}
 		}
 	}

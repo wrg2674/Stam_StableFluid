@@ -5,10 +5,10 @@
 
 class VectorCell : public Cell {
 private:
-	glm::vec3 vec;
+	glm::vec3 value;
 public:
 	VectorCell(glm::vec3 pos, glm::vec3 cellSize, bool isBoundary);
-	void updateCell(glm::vec3 vec);
+	void updateCell(glm::vec3 value);
 	double getX();
 	double getY();
 	double getZ();

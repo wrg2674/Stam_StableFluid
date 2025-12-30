@@ -1,22 +1,22 @@
 #include "VectorCell.h"
 
 VectorCell::VectorCell(glm::vec3 pos, glm::vec3 cellSize, bool isBoundary):Cell(pos, cellSize, isBoundary){
-	this->vec = glm::vec3(0);
+	this->value = glm::vec3(0);
 }
 
-void VectorCell::updateCell(glm::vec3 vec)
+void VectorCell::updateCell(glm::vec3 value)
 {
-	this->vec = vec;
+	this->value = value;
 }
 double VectorCell::getX() {
-	return vec.x;
+	return value.x;
 }
 double VectorCell::getY() {
-	return vec.y;
+	return value.y;
 }
 double VectorCell::getZ() {
-	return vec.z;
+	return value.z;
 }
 glm::vec3 VectorCell::get() {
-	return vec;
+	return value;
 }

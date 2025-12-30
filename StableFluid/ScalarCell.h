@@ -5,11 +5,11 @@
 
 class ScalarCell : public Cell {
 private:
-	double rho;
+	double value;
 
 public:
 	ScalarCell(glm::vec3 pos, glm::vec3 cellSize, bool isBoundary);
-	void updateCell(double rho);
+	void updateCell(double value);
 	double get();
 };
 
