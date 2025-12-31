@@ -4,8 +4,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <algorithm>
+
 #include "Shader.h"
 #include "camera.h"
+#include "Solver.h"
 
 using namespace std;
 
@@ -82,9 +85,10 @@ int main() {
 
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
+		deltaTime = glfwGetTime() - lastFrame;
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		fluidShader.use();
 
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
@@ -145,4 +149,28 @@ void mouse_callback(GLFWwindow* window, double xposln, double yposln) {
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 	camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+void injectionSmoke(GLFWwindow* window, Solver solver) {
+	double mx, my;
+	int nx = solver.getGridNumber().x;
+	int ny = solver.getGridNumber().y;
+	int sliceK = 0;
+	glfwGetCursorPos(window, &mx, &my);
+
+	double u = mx / (double)SCR_WIDTH;
+	double v = 1.0 - (my / (double)SCR_HEIGHT);
+
+	u = clamp(u, 0, 1);
+	v = clamp(v, 0, 1);
+
+	int i = (int)(u * nx);
+	int j = (int)(v * ny);
+	int k = sliceK;
+
+	int radius = 3;
+	double desityPerSec = 60.0;
+	glm::vec3 forcePerSec(0.0f, 40.0f, 0.0f);
+	solver.injection(i, j, k, radius, desityPerSec, forcePerSec);
+
 }

@@ -25,16 +25,25 @@ private:
 	VectorGrid nextVelocityField;
 	ScalarGrid prevRhoField;
 	ScalarGrid nextRhoField;
+	ScalarGrid prevPressureField;
+	ScalarGrid nextPressureField;
 
 	double dt;
 	void addForce(VectorCell& nextVc, glm::vec3 force);
-	void transport(VectorCell& nextVc, VectorGrid& vf, int i, int j, int k, double dt);
-	void diffuse(double viscosity);
-	void project(VectorGrid& vf, ScalarGrid& pf);
+	void addSource(ScalarCell& nextSc, double source);
+	void transport(VectorGrid& vf, VectorCell& nextVc, int i, int j, int k, double dt);
+	void transport(ScalarGrid& sf, VectorCell& nextVc, ScalarCell& nextSc, int i, int j, int k, double dt);
+	void diffuseVectorField(double viscosity);
+	void diffuseScalarField(double diffusion);
+	void project();
 public:
 	Solver(double dt);
-	void updateVectorField(glm::vec3 force);
-	void updateScalarField(double source);
+	void solveVectorField(glm::vec3 force);
+	void solveScalarField(double source);
+	void prevFieldUpdate();
+	void nextFieldUpdate();
+	void injection(int i, int j, int k, int radius, double densityPerSec, glm::vec3 forcePerSec);
+	glm::vec3 getGridNumber();
 };
 
 

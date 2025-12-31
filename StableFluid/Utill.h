@@ -10,20 +10,26 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
+#include <cmath>
 
 #include "VectorCell.h"
 #include "ScalarCell.h"
 #include "VectorGrid.h"
 #include "ScalarGrid.h"
 
-glm::vec3 trace(VectorGrid& prevField, VectorCell vc, int i, int j, int k, double dt) {
+inline glm::vec3 trace(VectorGrid& prevField, VectorCell vc, int i, int j, int k, double dt) {
 	glm::vec3 currentPos = glm::vec3(prevField.cell[i][j][k].getPos().x, prevField.cell[i][j][k].getPos().y, prevField.cell[i][j][k].getPos().z);
 	glm::vec3 prevPos = glm::vec3(currentPos.x - vc.get().x * dt, currentPos.y - vc.get().y * dt, currentPos.z - vc.get().z * dt);
 
 	return prevPos;
 }
+inline glm::vec3 trace(ScalarGrid& prevField, VectorCell vc, int i, int j, int k, double dt) {
+	glm::vec3 currentPos = glm::vec3(prevField.cell[i][j][k].getPos().x, prevField.cell[i][j][k].getPos().y, prevField.cell[i][j][k].getPos().z);
+	glm::vec3 prevPos = glm::vec3(currentPos.x - vc.get().x * dt, currentPos.y - vc.get().y * dt, currentPos.z - vc.get().z * dt);
 
-double clamp(double value, double min, double max) {
+	return prevPos;
+}
+inline double clamp(double value, double min, double max) {
 	if (value < min) {
 		return min;
 	}
@@ -33,8 +39,7 @@ double clamp(double value, double min, double max) {
 	return value;
 }
 
-glm::vec3 interpolate(VectorGrid& vf, glm::vec3 prevPos) {
-	// 이전 벡터장의 i, j, k를 prevPos로부터 구해야함 - 아직 안함
+inline glm::vec3 interpolate(VectorGrid& vf, glm::vec3 prevPos) {
 	double prevPosIndexX = (prevPos.x - vf.getOrigin().x) / vf.cell[0][0][0].getCellSize().x-0.5;
 	double prevPosIndexY = (prevPos.y - vf.getOrigin().y) / vf.cell[0][0][0].getCellSize().y-0.5;
 	double prevPosIndexZ = (prevPos.z - vf.getOrigin().z) / vf.cell[0][0][0].getCellSize().z-0.5;
@@ -47,7 +52,6 @@ glm::vec3 interpolate(VectorGrid& vf, glm::vec3 prevPos) {
 	int j = (int)floor(prevPosIndexY);
 	int k = (int)floor(prevPosIndexZ);
 
-	glm::vec3 currentPos = vf.cell[i][j][k].getPos();
 	double weightElementX = prevPosIndexX - i;
 	double weightElementY = prevPosIndexY - j;
 	double weightElementZ = prevPosIndexZ - k;
@@ -74,11 +78,48 @@ glm::vec3 interpolate(VectorGrid& vf, glm::vec3 prevPos) {
 	result = interpolateZ;
 	return result;
 }
-double difference(double prevValue, double nextValue, double cellSize) {
+
+inline double interpolate(ScalarGrid& sf, glm::vec3 prevPos) {
+	double prevPosIndexX = (prevPos.x - sf.getOrigin().x) / sf.cell[0][0][0].getCellSize().x - 0.5;
+	double prevPosIndexY = (prevPos.y - sf.getOrigin().y) / sf.cell[0][0][0].getCellSize().y - 0.5;
+	double prevPosIndexZ = (prevPos.z - sf.getOrigin().z) / sf.cell[0][0][0].getCellSize().z - 0.5;
+
+	prevPosIndexX = clamp(prevPosIndexX, 1, sf.getNumber().x - 2);
+	prevPosIndexY = clamp(prevPosIndexY, 1, sf.getNumber().y - 2);
+	prevPosIndexZ = clamp(prevPosIndexZ, 1, sf.getNumber().z - 2);
+
+	int i = (int)floor(prevPosIndexX);
+	int j = (int)floor(prevPosIndexY);
+	int k = (int)floor(prevPosIndexZ);
+
+	double weightX = prevPosIndexX - i;
+	double weightY = prevPosIndexY - j;
+	double weightZ = prevPosIndexZ - k;
+
+	weightX = clamp(weightX, 0, 1);
+	weightY = clamp(weightY, 0, 1);
+	weightZ = clamp(weightZ, 0, 1);
+
+	double result;
+	double interpolateX1 = (1 - weightX) * sf.cell[i][j][k].get() + (weightX)*sf.cell[i + 1][j][k].get();
+	double interpolateX2 = (1 - weightX) * sf.cell[i][j + 1][k].get() + (weightX)*sf.cell[i + 1][j + 1][k].get();
+	double interpolateX3 = (1 - weightX) * sf.cell[i][j][k + 1].get() + (weightX)*sf.cell[i + 1][j][k + 1].get();
+	double interpolateX4 = (1 - weightX) * sf.cell[i][j + 1][k + 1].get() + (weightX)*sf.cell[i + 1][j + 1][k + 1].get();
+
+	double interpolateY1 = (1 - weightY) * interpolateX1 + (weightY)*interpolateX2;
+	double interpolateY2 = (1 - weightY) * interpolateX3 + (weightY)*interpolateX4;
+
+	double interpolateZ = (1 - weightZ) * interpolateY1 + (weightZ)*interpolateY2;
+
+	result = interpolateZ;
+	return result;
+}
+
+inline double difference(double prevValue, double nextValue, double cellSize) {
 	return (nextValue - prevValue) / (2.0*cellSize);
 }
 
-glm::vec3 gradient(ScalarGrid& nextSf, int i, int j, int k) {
+inline glm::vec3 gradient(ScalarGrid& nextSf, int i, int j, int k) {
 	glm::vec3 result;
 	glm::vec3 cellSize = nextSf.cell[i][j][k].getCellSize();
 
@@ -89,7 +130,7 @@ glm::vec3 gradient(ScalarGrid& nextSf, int i, int j, int k) {
 	result = glm::vec3(xComponent, yComponent, zComponent);
 	return result;
 }
-double divergence(VectorGrid& nextVf, int i, int j, int k) {
+inline double divergence(VectorGrid& nextVf, int i, int j, int k) {
 	glm::vec3 cellSize = nextVf.cell[i][j][k].getCellSize();
 	double x = difference(nextVf.cell[i - 1][j][k].getX(), nextVf.cell[i + 1][j][k].getX(), cellSize.x);
 	double y = difference(nextVf.cell[i][j - 1][k].getY(), nextVf.cell[i][j + 1][k].getY(), cellSize.y);
@@ -97,7 +138,7 @@ double divergence(VectorGrid& nextVf, int i, int j, int k) {
 
 	return x + y + z;
 }
-glm::vec3 curl(VectorGrid& nextVf, int i, int j, int k) {
+inline glm::vec3 curl(VectorGrid& nextVf, int i, int j, int k) {
 
 	glm::vec3 cellSize = nextVf.cell[i][j][k].getCellSize();
 
@@ -118,25 +159,25 @@ glm::vec3 curl(VectorGrid& nextVf, int i, int j, int k) {
 	return result;
 }
 
-glm::vec3 neighborSum(VectorGrid& vf, int i, int j, int k) {
+inline glm::vec3 neighborSum(VectorGrid& vf, int i, int j, int k) {
 	return vf.cell[i - 1][j][k].get() + vf.cell[i + 1][j][k].get() + vf.cell[i][j - 1][k].get() + vf.cell[i][j + 1][k].get() + vf.cell[i][j][k - 1].get() + vf.cell[i][j][k + 1].get();
 }
-double neighborSum(ScalarGrid& sf, int i, int j, int k) {
+inline double neighborSum(ScalarGrid& sf, int i, int j, int k) {
 	return sf.cell[i - 1][j][k].get() + sf.cell[i + 1][j][k].get() + sf.cell[i][j - 1][k].get() + sf.cell[i][j + 1][k].get() + sf.cell[i][j][k - 1].get() + sf.cell[i][j][k + 1].get();
 }
 
-glm::vec3 laplaccian(VectorGrid& nextVf, int i, int j, int k) {
+inline glm::vec3 laplaccian(VectorGrid& nextVf, int i, int j, int k) {
 	vector<vector<vector<VectorCell>>>& nvc = nextVf.cell;
 	glm::vec3 cellSize = nvc[i][j][k].getCellSize();
 
 	glm::vec3 neighbor = neighborSum(nextVf, i, j, k);
-	glm::vec3 result = neighbor.x - glm::vec3(6) * nvc[i][j][k].get();
+	glm::vec3 result = neighbor - glm::vec3(6) * nvc[i][j][k].get();
 
 	result = result / (cellSize * cellSize);
 	return result;
 }
 
-double laplaccian(ScalarGrid& nextSf, int i, int j, int k) {
+inline double laplaccian(ScalarGrid& nextSf, int i, int j, int k) {
 	vector<vector<vector<ScalarCell>>>& nvc = nextSf.cell;
 	double cellSize = nvc[i][j][k].getCellSize().x;
 
@@ -147,7 +188,7 @@ double laplaccian(ScalarGrid& nextSf, int i, int j, int k) {
 	return result;
 }
 
-void neumannBoundaryCondition(VectorGrid& vf) {
+inline void velocityBoundaryCondition(VectorGrid& vf) {
 	double x, y, z;
 	int bx, by, bz;
 	glm::vec3 avg;
@@ -260,7 +301,7 @@ void neumannBoundaryCondition(VectorGrid& vf) {
 	}
 }
 
-void neumannBoundaryCondition(ScalarGrid& sf) {
+inline void neumannBoundaryCondition(ScalarGrid& sf) {
 	int bx, by, bz;
 	double avg;
 	bx = (int)sf.getNumber().x - 1;
@@ -350,4 +391,6 @@ void neumannBoundaryCondition(ScalarGrid& sf) {
 		}
 	}
 }
+
+
 #endif
