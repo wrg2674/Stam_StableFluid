@@ -69,5 +69,6 @@ public:
 	glm::vec3 getOrigin() {
 		return origin;
 	}
+
 };
 #endif

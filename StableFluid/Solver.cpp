@@ -1,48 +1,113 @@
 #include "Solver.h"
 
-
+#define RESOLUTION 32
 Solver::Solver(double dt) : 
-	prevVelocityField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(64)),
-	nextVelocityField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(64)),
-	prevRhoField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(64)),
-	nextRhoField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(64)),
-	prevPressureField(glm::vec3(0,0,-20), glm::vec3(20), glm::vec3(64)),
-	nextPressureField(glm::vec3(0,0,-20), glm::vec3(20), glm::vec3(64))
+	prevVelocityField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(RESOLUTION)),
+	nextVelocityField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(RESOLUTION)),
+	prevRhoField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(RESOLUTION)),
+	nextRhoField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(RESOLUTION)),
+	prevPressureField(glm::vec3(0,0,-20), glm::vec3(20), glm::vec3(RESOLUTION)),
+	nextPressureField(glm::vec3(0,0,-20), glm::vec3(20), glm::vec3(RESOLUTION)),
+	jcbVelocityField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(RESOLUTION)),
+	jcbRhoField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(RESOLUTION)),
+	jcbPressureField(glm::vec3(0, 0, -20), glm::vec3(20), glm::vec3(RESOLUTION))
 {
 	this->dt = dt;
 }
 
-void Solver::addForce(VectorCell& nextVc, glm::vec3 force) {
-	double nX = nextVc.getX() + dt * force.x;
-	double nY = nextVc.getY() + dt * force.y;
-	double nZ = nextVc.getZ() + dt * force.z;
+void Solver::addForce(glm::vec3 force) {
+	int nx = (int)prevVelocityField.getNumber().x;
+	int ny = (int)prevVelocityField.getNumber().y;
+	int nz = (int)prevVelocityField.getNumber().z;
+#pragma omp parallel for schedule(static)
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				VectorCell currentVc = prevVelocityField.cell[i][j][k];
+				glm::vec3 value = currentVc.get() + force * (float)dt;
+				prevVelocityField.cell[i][j][k].updateCell(value);
+			}
+		}
+	}
+}
+void Solver::addForce(int i, int j, int k, glm::vec3 force) {
+	VectorCell currentVc = prevVelocityField.cell[i][j][k];
+	glm::vec3 value = currentVc.get() + force * (float)dt;
+	prevVelocityField.cell[i][j][k].updateCell(value);
+}
+void Solver::addSource(double source) {
+	int nx = (int)prevRhoField.getNumber().x;
+	int ny = (int)prevRhoField.getNumber().y;
+	int nz = (int)prevRhoField.getNumber().z;
+#pragma omp parallel for schedule(static)
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				ScalarCell currentSc = prevRhoField.cell[i][j][k];
+				double value = currentSc.get() + source * dt;
+				prevRhoField.cell[i][j][k].updateCell(value);
+			}
+		}
+	}
+}
+void Solver::addSource(int i, int j, int k, double source) {
+	ScalarCell currentSc = prevRhoField.cell[i][j][k];
+	double value = currentSc.get() + source * dt;
+	prevRhoField.cell[i][j][k].updateCell(value);
+}
+glm::vec3 Solver::tracePrevPos(int i, int j, int k) {
+	VectorCell vc = prevVelocityField.cell[i][j][k];
+	glm::vec3 prevPos = trace(prevVelocityField, vc, i, j, k, dt);
+	return prevPos;
+}
+void Solver::transportVector() {
+	int nx = (int)prevVelocityField.getNumber().x;
+	int ny = (int)prevVelocityField.getNumber().y;
+	int nz = (int)prevVelocityField.getNumber().z;
+#pragma omp parallel for schedule(static)
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				glm::vec3 prevPos = tracePrevPos(i, j, k);
+				nextVelocityField.cell[i][j][k].updateCell(interpolate(prevVelocityField, prevPos));
+			}
+		}
+	}
+	
+}
 
-	nextVc.updateCell(glm::vec3(nX, nY, nZ));
-}
-void Solver::addSource(ScalarCell& nextSc, double source) {
-	double result = nextSc.get() + dt * source;
-	nextSc.updateCell(result);
-}
-void Solver::transport(VectorGrid& vf, VectorCell& nextVc, int i, int j, int k, double dt) {
-	glm::vec3 prevPos = trace(vf, nextVc, i, j, k, dt);
-	nextVc.updateCell(interpolate(vf, prevPos));
-}
-void Solver::transport(ScalarGrid& sf, VectorCell& nextVc, ScalarCell& nextSc, int i, int j, int k, double dt) {
-	glm::vec3 prevPos = trace(sf, nextVc, i, j, k, dt);
-	nextSc.updateCell(interpolate(sf, prevPos));
+void Solver::transportScalar() {
+	int nx = (int)prevRhoField.getNumber().x;
+	int ny = (int)prevRhoField.getNumber().y;
+	int nz = (int)prevRhoField.getNumber().z;
+#pragma omp parallel for schedule(static)
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				glm::vec3 prevPos = tracePrevPos(i, j, k);
+				nextRhoField.cell[i][j][k].updateCell(interpolate(prevRhoField, prevPos));
+			}
+		}
+	}
+	
 }
 void Solver::diffuseVectorField(double viscosity) {
+	velocityBoundaryCondition(nextVelocityField);
+	int nx = (int)prevVelocityField.getNumber().x;
+	int ny = (int)prevVelocityField.getNumber().y;
+	int nz = (int)prevVelocityField.getNumber().z;
+
 	double cellSize = prevVelocityField.cell[0][0][0].getCellSize().x;
 	double alpha = viscosity * dt / (cellSize * cellSize);
 	velocityBoundaryCondition(prevVelocityField);
-	nextVelocityField.cell = prevVelocityField.cell;
-	vector<vector<vector<VectorCell>>>jcbVec = prevVelocityField.cell;
+
 	
 	// Jacobi iteration
 	for (int n = 0; n < 30; n++) {
-		for (int i = 1; i < prevVelocityField.getNumber().x - 1; i++) {
-			for (int j = 1; j < prevVelocityField.getNumber().y - 1; j++) {
-				for (int k = 1; k < prevVelocityField.getNumber().z - 1; k++) {
+#pragma omp parallel for schedule(static)
+		for (int i = 1; i < nx - 1; i++) {
+			for (int j = 1; j < ny - 1; j++) {
+				for (int k = 1; k < nz - 1; k++) {
 					vector<vector<vector<VectorCell>>>& nvc = nextVelocityField.cell;
 					vector<vector<vector<VectorCell>>>& pvc = prevVelocityField.cell;
 					glm::vec3 laplaccianVec = laplaccian(nextVelocityField, i, j, k);
@@ -54,39 +119,43 @@ void Solver::diffuseVectorField(double viscosity) {
 					ny = ny / (1 + 6 * alpha);
 					nz = nz / (1 + 6 * alpha);
 					glm::vec3 updateVector = glm::vec3(nx, ny, nz);
-					jcbVec[i][j][k].updateCell(updateVector);
+					jcbVelocityField.cell[i][j][k].updateCell(updateVector);
 
 				}
 			}
 		}
-		nextVelocityField.cell = jcbVec;
+		nextVelocityField.cell.swap(jcbVelocityField.cell);
 		velocityBoundaryCondition(nextVelocityField);
 	}
 	
 }
 void Solver::diffuseScalarField(double diffusion) {
+	neumannBoundaryCondition(nextRhoField);
+	int nx = (int)prevRhoField.getNumber().x;
+	int ny = (int)prevRhoField.getNumber().y;
+	int nz = (int)prevRhoField.getNumber().z;
+
 	double cellSize = prevRhoField.cell[0][0][0].getCellSize().x;
 	double alpha = diffusion * dt / (cellSize * cellSize);
 
 	neumannBoundaryCondition(prevRhoField);
-	nextRhoField.cell = prevRhoField.cell;
-	vector<vector<vector<ScalarCell>>>jcbSca = prevRhoField.cell;
 
 	// Jacobi iteration
 	for (int n = 0; n < 30; n++) {
-		for (int i = 1; i < prevRhoField.getNumber().x - 1; i++) {
-			for (int j = 1; j < prevRhoField.getNumber().y - 1; j++) {
-				for (int k = 1; k < prevRhoField.getNumber().z - 1; k++) {
+#pragma omp parallel for schedule(static)
+		for (int i = 1; i < nx - 1; i++) {
+			for (int j = 1; j < ny - 1; j++) {
+				for (int k = 1; k < nz - 1; k++) {
 					vector<vector<vector<ScalarCell>>>& nsc = nextRhoField.cell;
 					vector<vector<vector<ScalarCell>>>& psc = prevRhoField.cell;
 					double laplaccianSca = laplaccian(nextRhoField, i, j, k);
 					double ns = psc[i][j][k].get() + alpha * (cellSize * cellSize * laplaccianSca + 6 * nsc[i][j][k].get());
 					ns = ns / (1 + 6 * alpha);
-					jcbSca[i][j][k].updateCell(ns);
+					jcbRhoField.cell[i][j][k].updateCell(ns);
 				}
 			}
 		}
-		nextRhoField.cell = jcbSca;
+		nextRhoField.cell.swap(jcbRhoField.cell);
 		neumannBoundaryCondition(nextRhoField);
 	}
 }
@@ -96,130 +165,74 @@ void Solver::project(){
 	int ny = (int)prevVelocityField.getNumber().y;
 	int nz = (int)prevVelocityField.getNumber().z;
 	double cellSize = prevVelocityField.cell[0][0][0].getCellSize().x;
-	ScalarGrid divergenceF = prevPressureField;
-	VectorGrid jcbVf = prevVelocityField;
-	ScalarGrid jcbSf = prevPressureField;
 
-	velocityBoundaryCondition(prevVelocityField);
 	for (int i = 1; i < nx - 1; i++) {
 		for (int j = 1; j < ny - 1; j++) {
 			for (int k = 1; k < nz - 1; k++) {
-				divergenceF.cell[i][j][k].updateCell(divergence(prevVelocityField, i, j, k));
+				prevPressureField.cell[i][j][k].updateCell(0);
+			}
+		}
+	}
+
+	velocityBoundaryCondition(prevVelocityField);
+#pragma omp parallel for schedule(static)
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				//divergence를 저장하는 버퍼로 잠시 nextPressureField를 재사용 (깊은 복사 줄이기 위함)
+				nextPressureField.cell[i][j][k].updateCell(divergence(prevVelocityField, i, j, k));
 			}
 		}
 	}
 	// Jacobi iteration
 	for (int n = 0; n < 30; n++) {
+#pragma omp parallel for schedule(static)
 		for (int i = 1; i < nx - 1; i++) {
 			for (int j = 1; j < ny - 1; j++) {
 				for (int k = 1; k < nz - 1; k++) {
 					double neighbor = neighborSum(prevPressureField, i, j, k);
-					double value = neighbor - divergenceF.cell[i][j][k].get() * cellSize * cellSize;
+					double value = neighbor - nextPressureField.cell[i][j][k].get() * cellSize * cellSize;
 					value = value / 6;
-					jcbSf.cell[i][j][k].updateCell(value);
+					jcbPressureField.cell[i][j][k].updateCell(value);
 				}
 			}
 		}
-		prevPressureField = jcbSf;
+		prevPressureField.cell.swap(jcbPressureField.cell);
 		neumannBoundaryCondition(prevPressureField);
 	}
+#pragma omp parallel for schedule(static)
 	for (int i = 1; i < nx - 1; i++) {
 		for (int j = 1; j < ny - 1; j++) {
 			for (int k = 1; k < nz - 1; k++) {
 				glm::vec3 value = prevVelocityField.cell[i][j][k].get() - gradient(prevPressureField, i, j, k);
-				jcbVf.cell[i][j][k].updateCell(value);
+				nextVelocityField.cell[i][j][k].updateCell(value);
 			}
 		}
 	}
-	prevVelocityField = jcbVf;
+	prevVelocityField.cell.swap(nextVelocityField.cell);
 	velocityBoundaryCondition(prevVelocityField);
 }
 
-void Solver::solveVectorField(glm::vec3 force){
-	for (int i = 1; i < prevVelocityField.getNumber().x - 1; i++) {
-		for (int j = 1; j < prevVelocityField.getNumber().y - 1; j++) {
-			for (int k = 1; k < prevVelocityField.getNumber().z - 1; k++) {
-				VectorCell& currentVc = prevVelocityField.cell[i][j][k];
-				if (currentVc.isBoundary()) {
-					continue;
-				}
-				addForce(currentVc, force);
-				nextVelocityField.cell[i][j][k].updateCell((currentVc.get()));
-			}
-		}
-	}
-	prevVelocityField = nextVelocityField;
-	for (int i = 1; i < prevVelocityField.getNumber().x - 1; i++) {
-		for (int j = 1; j < prevVelocityField.getNumber().y - 1; j++) {
-			for (int k = 1; k < prevVelocityField.getNumber().z - 1; k++) {
-				VectorCell currentVc = prevVelocityField.cell[i][j][k];
-				if (currentVc.isBoundary()) {
-					continue;
-				}
-				transport(prevVelocityField, currentVc, i, j, k, dt);
-				nextVelocityField.cell[i][j][k].updateCell((currentVc.get()));
-			}
-		}
-	}
-	ScalarGrid sf = ScalarGrid(glm::vec3(0, 0, 0), nextVelocityField.getLength(), nextVelocityField.getNumber());
-	VectorGrid vf = VectorGrid(glm::vec3(0, 0, 0), nextVelocityField.getLength(), nextVelocityField.getNumber());
-	for (int i = 1; i < nextVelocityField.getNumber().x - 1; i++) {
-		for (int j = 1; j < nextVelocityField.getNumber().y - 1; j++) {
-			for (int k = 1; k < nextVelocityField.getNumber().z - 1; k++) {
-				sf.cell[i][j][k].updateCell(divergence(nextVelocityField, i, j, k));
-				vf.cell[i][j][k].updateCell(curl(nextVelocityField, i, j, k));
-			}
-		}
-	}
-	prevFieldUpdate();
-	double viscocity = 0.2;
-	diffuseVectorField(viscocity);
-	prevFieldUpdate();
+void Solver::solveVectorField(glm::vec3 force, double viscosity){
+	addForce(force);
+	velocityBoundaryCondition(prevVelocityField);
+	transportVector();
+	velocityBoundaryCondition(nextVelocityField);
+	prevVelocityField.cell.swap(nextVelocityField.cell);
+	diffuseVectorField(viscosity);
+	prevVelocityField.cell.swap(nextVelocityField.cell);
 	project();
-	nextFieldUpdate();
 }
-void Solver::solveScalarField(double source) {
-	for (int i = 1; i < prevRhoField.getNumber().x - 1; i++) {
-		for (int j = 1; j < prevRhoField.getNumber().y - 1; j++) {
-			for (int k = 1; k < prevRhoField.getNumber().z - 1; k++) {
-				ScalarCell& currentSc = prevRhoField.cell[i][j][k];
-				addSource(currentSc, source);
-				nextRhoField.cell[i][j][k].updateCell((currentSc.get()));
-			}
-		}
-	}
-	prevRhoField = nextRhoField;
-	for (int i = 1; i < prevRhoField.getNumber().x - 1; i++) {
-		for (int j = 1; j < prevRhoField.getNumber().y - 1; j++) {
-			for (int k = 1; k < prevRhoField.getNumber().z - 1; k++) {
-				VectorCell currentVc = prevVelocityField.cell[i][j][k];
-
-				transport(prevRhoField, currentVc, i, j, k, dt);
-				ScalarCell currentSc = prevRhoField.cell[i][j][k];
-				nextRhoField.cell[i][j][k].updateCell((currentSc.get()));
-			}
-		}
-	}
-	ScalarGrid sf = ScalarGrid(glm::vec3(0, 0, 0), nextRhoField.getLength(), nextRhoField.getNumber());
-	VectorGrid vf = VectorGrid(glm::vec3(0, 0, 0), nextRhoField.getLength(), nextRhoField.getNumber());
-
-	prevFieldUpdate();
-	double viscocity = 0.5;
-	diffuseScalarField(viscocity);
-	prevFieldUpdate();
-
+void Solver::solveScalarField(double source, double diffusion) {
+	addSource(source);
+	neumannBoundaryCondition(prevRhoField);
+	transportScalar();
+	neumannBoundaryCondition(nextRhoField);
+	prevRhoField.cell.swap(nextRhoField.cell);
+	diffuseScalarField(diffusion);
+	prevRhoField.cell.swap(nextRhoField.cell);
 }
 
-void Solver::prevFieldUpdate() {
-	prevVelocityField = nextVelocityField;
-	prevRhoField = nextRhoField;
-	prevPressureField = nextPressureField;
-}
-void Solver::nextFieldUpdate() {
-	nextVelocityField = prevVelocityField;
-	nextRhoField = prevRhoField;
-	nextPressureField = prevPressureField;
-}
 glm::vec3 Solver::getGridNumber() {
 	return nextVelocityField.getNumber();
 }
@@ -232,6 +245,7 @@ void Solver::injection(int i, int j, int k, int radius, double densityPerSec, gl
 	j = clamp(j, 1, ny - 2);
 	k = clamp(k, 1, nz - 2);
 	radius = clamp(radius, 1, nx - 1);
+#pragma omp parallel for schedule(static)
 	for (int x = i - radius; x <= i + radius; x++) {
 		for (int y = j - radius; y <= j + radius; y++) {
 			for (int z = k - radius; z <= k + radius; z++) {
@@ -244,13 +258,29 @@ void Solver::injection(int i, int j, int k, int radius, double densityPerSec, gl
 				double dist = sqrt(dx * dx + dy * dy + dz * dz);
 				double weight = 1 - (dist / radius);
 				weight = clamp(weight, 0, 1);
-				//prevRhoField.cell[x][y][z].updateCell(densityPerSec * weight);
-				//prevVelocityField.cell[x][y][z].updateCell(forcePerSec * glm::vec3(weight));
-				addSource(prevRhoField.cell[x][y][z], densityPerSec * weight);
-				addForce(prevVelocityField.cell[x][y][z], forcePerSec * (float)weight);
+				addForce(x, y, z, forcePerSec * (float)weight);
+				addSource(x, y, z, densityPerSec * weight);
 			}
 		}
 	}
 	neumannBoundaryCondition(prevRhoField);
 	velocityBoundaryCondition(prevVelocityField);
+}
+
+glm::vec3 Solver::getCellPos(int i, int j, int k) {
+	return prevRhoField.cell[i][j][k].getPos();
+}
+glm::vec3 Solver::getCellSize() {
+	return prevRhoField.cell[0][0][0].getCellSize();
+}
+glm::vec3 Solver::getCenter() {
+	glm::vec3 origin = prevRhoField.getOrigin();
+	glm::vec3 idxCenter = prevRhoField.getNumber() / (float)2.0;
+	glm::vec3 cellSize = prevRhoField.cell[0][0][0].getCellSize();
+	glm::vec3 center = origin + idxCenter * cellSize;
+	center.z = -origin.z;
+	return center;
+}
+double Solver::getRho(int i, int j, int k) {
+	return prevRhoField.cell[i][j][k].get();
 }

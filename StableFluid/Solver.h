@@ -28,23 +28,33 @@ private:
 	ScalarGrid prevPressureField;
 	ScalarGrid nextPressureField;
 
+	VectorGrid jcbVelocityField;
+	ScalarGrid jcbRhoField;
+	ScalarGrid jcbPressureField;
+
 	double dt;
-	void addForce(VectorCell& nextVc, glm::vec3 force);
-	void addSource(ScalarCell& nextSc, double source);
-	void transport(VectorGrid& vf, VectorCell& nextVc, int i, int j, int k, double dt);
-	void transport(ScalarGrid& sf, VectorCell& nextVc, ScalarCell& nextSc, int i, int j, int k, double dt);
+
+	void addForce(glm::vec3 force);
+	void addForce(int i, int j, int k, glm::vec3 force);
+	void addSource(double source);
+	void addSource(int i, int j, int k, double source);
+	void transportVector();
+	void transportScalar();
 	void diffuseVectorField(double viscosity);
 	void diffuseScalarField(double diffusion);
 	void project();
+	glm::vec3 tracePrevPos(int i, int j, int k);
 public:
 	Solver(double dt);
-	void solveVectorField(glm::vec3 force);
-	void solveScalarField(double source);
-	void prevFieldUpdate();
-	void nextFieldUpdate();
+	void solveVectorField(glm::vec3 force, double viscosity);
+	void solveScalarField(double source, double diffusion);
 	void injection(int i, int j, int k, int radius, double densityPerSec, glm::vec3 forcePerSec);
 	glm::vec3 getGridNumber();
-};
+	glm::vec3 getCellPos(int i, int j, int k);
+	glm::vec3 getCellSize();
+	glm::vec3 getCenter();
+	double getRho(int i, int j, int k);
 
+};
 
 #endif
